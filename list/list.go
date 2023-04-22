@@ -1,6 +1,6 @@
-package list
+package dslist
 
-type List[T any] interface {
+type DSList[T any] interface {
 	Add(T)
 	Remove() (T, bool)
 	Get(index int) (T, bool)

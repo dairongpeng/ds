@@ -1,7 +1,7 @@
-package queue
+package dsqueue
 
-type Queue[T any] interface {
-	Enqueue(v T)
+type DSQueue[T any] interface {
+	Enqueue(value T)
 	Dequeue() (T, bool)
 	Front() (T, bool)
 	Size() int
