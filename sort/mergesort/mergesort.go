@@ -1,7 +1,20 @@
 package mergesort
 
-// MergeSort 归并排序递归实现
-func MergeSort[T any](arr []T, cmp func(item1, item2 any) int) {
+type MergeSorter[T any] struct {
+	Arr []T
+}
+
+// NewMergeSorter 初始化一个归并排序结构
+func NewMergeSorter[T any](values []T) *MergeSorter[T] {
+	ms := &MergeSorter[T]{
+		Arr: values,
+	}
+
+	return ms
+}
+
+// Sort 归并排序递归实现
+func (ms *MergeSorter[T]) Sort(arr []T, cmp func(item1, item2 any) int) {
 	// 空数组或者只存在1个元素
 	if len(arr) < 2 {
 		return
