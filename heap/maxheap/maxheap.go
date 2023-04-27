@@ -9,6 +9,8 @@ import (
 type MaxHeap[T any] struct {
 	// 大根堆底层数组结构
 	heap []T
+	// 当前堆的排序规则
+	cmp pkg.Comparator[T]
 	// 分配给堆的空间限制
 	limit int
 	// 表示目前这个堆收集了多少个数，即堆大小。也表示添加的下一个数应该放在哪个位置
@@ -16,9 +18,10 @@ type MaxHeap[T any] struct {
 }
 
 // NewMaxHeap 初始化一个大根堆结构
-func NewMaxHeap[T any](limit int) *MaxHeap[T] {
+func NewMaxHeap[T any](limit int, comparator pkg.Comparator[T]) *MaxHeap[T] {
 	maxHeap := &MaxHeap[T]{
 		heap:     make([]T, 0),
+		cmp:      comparator,
 		limit:    limit,
 		heapSize: 0,
 	}
@@ -33,20 +36,20 @@ func (h *MaxHeap[T]) IsFull() bool {
 	return h.heapSize == h.limit
 }
 
-func (h *MaxHeap[T]) Push(value T, cmp pkg.Comparator[T]) error {
+func (h *MaxHeap[T]) Push(value T) error {
 	if h.heapSize == h.limit {
 		return errors.New("heap is full")
 	}
 
 	h.heap[h.heapSize] = value
 	// heapSize的位置保存当前value
-	up(h.heap, h.heapSize, cmp)
+	up(h.heap, h.heapSize, h.cmp)
 	h.heapSize++
 	return nil
 }
 
 // Pop 返回堆中的最大值，并且在大根堆中，把最大值删掉。弹出后依然保持大根堆的结构
-func (h *MaxHeap[T]) Pop(cmp pkg.Comparator[T]) T {
+func (h *MaxHeap[T]) Pop() T {
 	// 弹出堆顶元素的实现为
 	// 1. 交换堆顶和队列末尾元素。
 	// 2. 堆大小减一
@@ -54,7 +57,7 @@ func (h *MaxHeap[T]) Pop(cmp pkg.Comparator[T]) T {
 	tmp := h.heap[0]
 	h.heapSize--
 	h.heap[0], h.heap[h.heapSize] = h.heap[h.heapSize], h.heap[0]
-	down(h.heap, 0, h.heapSize, cmp)
+	down(h.heap, 0, h.heapSize, h.cmp)
 	return tmp
 }
 
@@ -100,25 +103,26 @@ func down[T any](arr []T, index int, heapSize int, cmp pkg.Comparator[T]) {
 // 堆排序不是稳定的排序算法，因为在排序的过程，存在将堆的最后一个节点跟堆顶节点互换的操作，所以就有可能改变值相同数据的原始相对顺序。
 // 1. 建堆过程的时间复杂度是 O(n)
 // 2. 排序时间复杂度为 O(nlogn)。整体O(nlogn)
-func HeapSort[T any](arr []T, cmp pkg.Comparator[T]) {
+func HeapSort[T any](arr []T, comparator pkg.Comparator[T]) {
 	if len(arr) < 2 {
 		return
 	}
 
 	// 原始版本, 调整arr满足大根堆结构。O(N*logN)
 	//for i := 0; i < len(arr); i++ { // O(N)
-	//	heapInsert(arr, i) // O(logN)
+	//	up(arr, i, comparator) // O(logN)
 	//}
 
-	// 优化版本：heapInsert改为heapify。从末尾开始看是否需要heapify=》O(N)复杂度。
+	// 优化版本：up改为down。从末尾开始看是否需要down=》O(N)复杂度。
 	// 但是这只是优化了原有都是构建堆（O(NlogN)），最终的堆排序仍然是O(NlogN)。比原始版本降低了常数项
 	for i := len(arr) - 1; i >= 0; i-- {
-		down(arr, i, len(arr), cmp)
+		down(arr, i, len(arr), comparator)
 	}
 
 	// 实例化一个大根堆,此时arr已经是调整后满足大根堆结构的arr
 	mh := MaxHeap[T]{
 		heap:     arr,
+		cmp:      comparator,
 		limit:    len(arr),
 		heapSize: len(arr),
 	}
@@ -127,7 +131,7 @@ func HeapSort[T any](arr []T, cmp pkg.Comparator[T]) {
 	arr[0], arr[mh.heapSize] = arr[mh.heapSize], arr[0]
 	// O(N*logN)
 	for mh.heapSize > 0 { // O(N)
-		down(arr, 0, mh.heapSize, cmp) // O(logN)
+		down(arr, 0, mh.heapSize, mh.cmp) // O(logN)
 		mh.heapSize--
 		arr[0], arr[mh.heapSize] = arr[mh.heapSize], arr[0] // O(1)
 	}

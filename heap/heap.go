@@ -1,4 +1,4 @@
-package heap
+package dsheap
 
 // DSHeap 堆结构（完全二叉树的子集）
 // 每个子树父节点都比孩子大称为大根堆
