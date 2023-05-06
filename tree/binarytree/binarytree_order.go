@@ -1,6 +1,7 @@
 package binarytree
 
 import (
+	"github.com/dairongpeng/ds/pkg"
 	"github.com/dairongpeng/ds/queue/arrayqueue"
 	"github.com/dairongpeng/ds/stack/arraystack"
 )
@@ -218,4 +219,59 @@ func (t *Tree[T]) LevelOrder() []T {
 	}
 
 	return result
+}
+
+// BuildTreeByPreAndInOrder 根据二叉树的先序、中序序列，构建还原该树。（也可以使用中序和后序结合来构建）
+// 注意：
+// 1. 仅凭先序无法还原该树
+// 例如先序序列为[1, 2, 4, 3, 5, 6]，可能对应的是如下两个树
+//
+//	     1                  1
+//	  2     5            2     3
+//	4   3 6   nil    nil   4 5    6
+//
+// 2. 树的节点Value需要唯一，否则无法分清左右树的边界。如果Value不唯一，需要增加额外信息确定唯一。或者再引入二叉树的后续序列，三种序列一块确定和构建该树。
+func BuildTreeByPreAndInOrder[T any](preorder []T, inorder []T, comparator pkg.Comparator[T]) *Tree[T] {
+	if len(preorder) == 0 {
+		return nil
+	}
+	tree := &Tree[T]{}
+
+	var f func(preorder []T, inorder []T, comparator pkg.Comparator[T]) *Node[T]
+
+	f = func(preorder []T, inorder []T, comparator pkg.Comparator[T]) *Node[T] {
+		if len(preorder) == 0 {
+			return nil
+		}
+
+		headValue := preorder[0]
+		headIndex := 0
+
+		// 通过preorder和inorder结合，可以找到当前子树头结点的位置
+		for i, v := range inorder {
+			if comparator(v, headValue) == 0 { // v == headValue
+				headIndex = i
+				break
+			}
+		}
+
+		leftInorder := inorder[:headIndex]
+		rightInorder := inorder[headIndex+1:]
+
+		leftPreorder := preorder[1 : len(leftInorder)+1]
+		rightPreorder := preorder[len(leftInorder)+1:]
+
+		head := &Node[T]{
+			Value: headValue,
+		}
+
+		head.Left = f(leftPreorder, leftInorder, comparator)
+		head.Right = f(rightPreorder, rightInorder, comparator)
+
+		return head
+	}
+
+	tree.Root = f(preorder, inorder, comparator)
+
+	return tree
 }

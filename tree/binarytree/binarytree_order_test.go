@@ -2,6 +2,7 @@ package binarytree
 
 import (
 	"fmt"
+	"github.com/dairongpeng/ds/pkg"
 	"testing"
 )
 
@@ -78,6 +79,31 @@ func TestBinaryTreeNonR(t *testing.T) {
 
 	fmt.Print("level-order:")
 	for _, t := range levelOrders {
+		fmt.Printf("%d ", t)
+	}
+	fmt.Println()
+}
+
+// 树结构：
+//
+//	   8
+//	9      3
+//
+// 4   1  6   7
+//
+// 测试结果：
+// === RUN   TestBuildTreeByPreAndInOrder
+// 8 9 3 4 1 6 7
+// --- PASS: TestBuildTreeByPreAndInOrder (0.00s)
+// PASS
+//
+// Process finished with the exit code 0
+func TestBuildTreeByPreAndInOrder(t *testing.T) {
+	preorder := []int{8, 9, 4, 1, 3, 6, 7}
+	inorder := []int{4, 9, 1, 8, 6, 3, 7}
+	tree := BuildTreeByPreAndInOrder[int](preorder, inorder, pkg.NumberComparator[int])
+	levelorder := tree.LevelOrder()
+	for _, t := range levelorder {
 		fmt.Printf("%d ", t)
 	}
 	fmt.Println()
