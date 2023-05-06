@@ -1,6 +1,7 @@
 package binarytree
 
 import (
+	"github.com/dairongpeng/ds/pkg"
 	"github.com/dairongpeng/ds/queue/arrayqueue"
 	"math"
 )
@@ -101,6 +102,46 @@ func (t *Tree[T]) MaxWidthNoMap() int {
 		}
 	}
 	return max
+}
+
+// FindSuccessorNode 给定一个二叉搜索树的节点，求该节点的后继结点。后继结点是中序遍历中一个节点的下一个节点
+// 1. 如果该节点的右子节点存在，那么该节点的后继节点是其右子节点的子树中最左侧的节点。
+// 2. 如果该节点的右子节点不存在，则需要向上遍历其祖先节点，直到找到一个祖先节点，该祖先节点的左子节点是该节点的祖先节点之一。这个祖先节点就是该节点的后继节点。
+// 3. 该算法常常被用在二叉搜索树中（平衡）所以该算法算法复杂度O(h)，h为树的高度。一个节点的后继结点是整个树节点中大于当前节点的最小节点
+// 4. 二叉搜索树的中序遍历，就是一个从小到达排列的序列
+// 5. 如果不是二叉搜索树，寻找某节点的后继，则可能需要给节点增加一个parent指针，或者对该树进行中序遍历，再线性查找。
+func (t *Tree[T]) FindSuccessorNode(node *Node[T], comparator pkg.Comparator[T]) *Node[T] {
+	root := t.Root
+
+	// 如果右子树不为空，后继节点就是右子树的最左节点
+	if node.Right != nil {
+		curr := node.Right
+		for curr.Left != nil {
+			curr = curr.Left
+		}
+		return curr
+	} else {
+		var succ *Node[T]
+		curr := root
+		// 否则，从树的根节点开始遍历找。实际上就是二分查找，二分查找到了node，那么上一个维护的节点就是node的后继节点
+		// 因为二叉搜索树，根节点划分了左右子树。
+		for curr != nil {
+			if comparator(curr.Value, node.Value) > 0 { // 如果当前节点比 node 大 curr.Value > node.Value
+				// 则当前节点有可能为 node 的后继节点，
+				// 将当前节点赋给后继节点变量 succ, 后面看情况决定要不要更新为更确切的后继节点
+				// 然后向左子树遍历以寻找更准确的后继节点
+				succ = curr
+				curr = curr.Left
+			} else if comparator(curr.Value, node.Value) < 0 { // 如果当前节点比 node 小 curr.Value < node.Value
+				// 则当前节点不能为 node 的后继节点，
+				// 向右子树继续寻找后继节点
+				curr = curr.Right
+			} else { // 否则说明找到了 node 节点，退出循环，标记其后继节点为当前找到的最新的后继节点
+				break
+			}
+		}
+		return succ
+	}
 }
 
 // IsBalanced 判断一颗二叉树是不是平衡二叉树
