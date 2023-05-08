@@ -148,6 +148,7 @@ func (t *Tree[T]) FindSuccessorNode(node *Node[T], comparator pkg.Comparator[T])
 func (t *Tree[T]) IsBalanced() bool {
 	head := t.Root
 
+	// 平衡信息
 	type info struct {
 		ok     bool
 		height int
@@ -165,22 +166,28 @@ func (t *Tree[T]) IsBalanced() bool {
 			return i
 		}
 
-		leftInfo := f(head.Right)
+		// 左子树的平衡信息
 		rightInfo := f(head.Left)
+		// 右孩子的平衡信息
+		leftInfo := f(head.Right)
 
+		// 当前节点左右子树的最大高度
 		var maxh int
 		if leftInfo.height > rightInfo.height {
 			maxh = leftInfo.height
 		} else {
 			maxh = rightInfo.height
 		}
+		// 当前节点的高度
 		ch := maxh + 1
 
+		// 当前节点确认的树是否是平衡的
 		var cok = true
 		if !leftInfo.ok || !rightInfo.ok || math.Abs(float64(leftInfo.height)-float64(rightInfo.height)) > 1 {
 			cok = false
 		}
 
+		// 构建当前节点的平衡信息返回
 		return &info{
 			ok:     cok,
 			height: ch,
@@ -188,4 +195,374 @@ func (t *Tree[T]) IsBalanced() bool {
 	}
 
 	return f(head).ok
+}
+
+// FindMaxDistance 返回二叉树中任意两节点的最大距离
+func (t *Tree[T]) FindMaxDistance() int {
+	head := t.Root
+	if head == nil {
+		return 0
+	}
+
+	// 距离信息
+	type info struct {
+		// 当前节点为树根的情况下，该树的最大距离
+		maxdistance int
+		// 当前节点为树根的情况下，该树的高度
+		height int
+	}
+
+	var f func(node *Node[T]) *info
+
+	f = func(node *Node[T]) *info {
+		if node == nil {
+			return &info{
+				maxdistance: 0,
+				height:      0,
+			}
+		}
+
+		// 左树信息
+		leftInfo := f(node.Left)
+		// 右树信息
+		rightInfo := f(node.Right)
+
+		// 用左右树的信息，加工当前节点自身的info
+		// 自身的高度是，左右较大的高度加上自身节点高度1
+		ch := int(math.Max(float64(leftInfo.height), float64(rightInfo.height))) + 1
+		// 自身最大距离，(左右树最大距离)和(左右树高度相加再加1)，求最大值
+		cd := int(math.Max(
+			math.Max(float64(leftInfo.maxdistance), float64(rightInfo.maxdistance)),
+			float64(leftInfo.height+rightInfo.height+1)))
+		// 自身的info返回
+		return &info{
+			maxdistance: cd,
+			height:      ch,
+		}
+	}
+
+	return f(head).maxdistance
+}
+
+// FindMaxSubBSTSize 查找二叉树中所有子树中含最多节点的二叉搜索子树节点的数量
+func (t *Tree[T]) FindMaxSubBSTSize(comparator pkg.Comparator[T]) int {
+	head := t.Root
+	if head == nil {
+		return 0
+	}
+
+	type info struct {
+		// 以当前节点为头节点的树，整体是否是二叉搜索树
+		IsAllBST bool
+		// 最大的满足二叉搜索树条件的size
+		MaxSubBSTSize int
+		// 整棵树的最小值
+		Min T
+		// 整棵树的最大值
+		Max T
+	}
+
+	var f func(node *Node[T]) *info
+
+	f = func(node *Node[T]) *info {
+		if node == nil {
+			return nil
+		}
+
+		// 左子树返回的Info信息
+		leftInfo := f(node.Left)
+		// 右子树返回的Info信息
+		rightInfo := f(node.Right)
+
+		// 加工我自身的info。min维护左右手min和当前v的最小值； max维护左右树的max和当前v的最大值
+		min, max := node.Value, node.Value
+		// 左树不为空，加工min和max
+		if leftInfo != nil {
+			if comparator(min, leftInfo.Min) > 0 {
+				min = leftInfo.Min
+			}
+
+			if comparator(max, leftInfo.Max) < 0 {
+				max = leftInfo.Max
+			}
+		}
+
+		// 右树不为空，加工min和max
+		if rightInfo != nil {
+			if comparator(min, rightInfo.Min) > 0 {
+				min = rightInfo.Min
+			}
+
+			if comparator(max, rightInfo.Max) < 0 {
+				max = rightInfo.Max
+			}
+		}
+
+		// case1: 与node无关的情况。当前二叉树存在的最大搜索二叉树的最大大小，是左右树存在的最大二叉搜索树的较大的
+		maxSubBSTSize := 0
+		if leftInfo != nil {
+			maxSubBSTSize = leftInfo.MaxSubBSTSize
+		}
+		if rightInfo != nil {
+			maxSubBSTSize = int(math.Max(float64(maxSubBSTSize), float64(rightInfo.MaxSubBSTSize)))
+		}
+		// 如果当前节点为头的二叉树不是二叉搜索树，则当前Info信息中isAllBST为false
+		isAllBST := false
+
+		// case2：与node有关的情况
+		// 左树整个是二叉搜索树么
+		leftIsAllBST := false
+		// 右树整个是二叉搜索树么
+		rightIsAllBST := false
+		// 左树最大值小于node的值是否
+		leftMaxVLessNodeV := false
+		// 右树的最小值，大于node的值是否
+		rightMinMoreNodeV := false
+		if leftInfo == nil {
+			leftIsAllBST = true
+			leftMaxVLessNodeV = true
+		} else {
+			leftIsAllBST = leftInfo.IsAllBST
+			// leftMaxVLessNodeV = leftInfo.Max < node.Val
+			if comparator(leftInfo.Max, node.Value) < 0 {
+				leftMaxVLessNodeV = true
+			} else {
+				leftMaxVLessNodeV = false
+			}
+		}
+
+		if rightInfo == nil {
+			rightIsAllBST = true
+			rightMinMoreNodeV = true
+		} else {
+			rightIsAllBST = rightInfo.IsAllBST
+			// rightMinMoreNodeV = rightInfo.Min > node.Val
+			if comparator(rightInfo.Min, node.Value) > 0 {
+				rightMinMoreNodeV = true
+			} else {
+				rightMinMoreNodeV = false
+			}
+		}
+
+		// 如果左树是二叉搜索树，右树也是二叉搜索树，当前节点为树根的左树最大值都比当前值小，当前节点为树根的右树最小值都比当前值大
+		// 证明以当前节点node为树根的树，也是一个二叉搜索树。满足case2
+		if leftIsAllBST && rightIsAllBST && leftMaxVLessNodeV && rightMinMoreNodeV {
+			leftSize := 0
+			rightSize := 0
+			if leftInfo != nil {
+				leftSize = leftInfo.MaxSubBSTSize
+			}
+
+			if rightInfo != nil {
+				rightSize = rightInfo.MaxSubBSTSize
+			}
+
+			// 当前节点为树根的二叉搜索树的节点大小是左树存在的最大二叉搜索树的大小，加上右树存在的最大的二叉搜索树的大小，加上当前node节点1
+			maxSubBSTSize = leftSize + rightSize + 1
+			// 当前节点整个是二叉搜索树
+			isAllBST = true
+		}
+
+		return &info{
+			IsAllBST:      isAllBST,
+			MaxSubBSTSize: maxSubBSTSize,
+			Min:           min,
+			Max:           max,
+		}
+	}
+
+	return f(head).MaxSubBSTSize
+}
+
+// IsFull 判断一个树是否是满二叉树
+func (t *Tree[T]) IsFull() bool {
+	head := t.Root
+	if head == nil {
+		return true
+	}
+
+	type info struct {
+		// 已x为头节点的树，高度是多少
+		height int
+		// 已x为头节点的树，整个树的节点个数是多少
+		nodes int
+	}
+
+	var f func(node *Node[T]) *info
+
+	f = func(node *Node[T]) *info {
+		if node == nil {
+			return &info{
+				height: 0,
+				nodes:  0,
+			}
+		}
+
+		leftInfo := f(node.Left)
+		rightInfo := f(node.Right)
+		// 当前高度
+		ch := int(math.Max(float64(leftInfo.height), float64(rightInfo.height))) + 1
+		// 当前节点为树根的二叉树所有节点数
+		nodes := leftInfo.nodes + rightInfo.nodes + 1
+		return &info{
+			height: ch,
+			nodes:  nodes,
+		}
+	}
+
+	rootInfo := f(head)
+
+	// 如果一个树的高度 * 2 - 1 等于节点数，那么这个树是满二叉树
+	return (rootInfo.height*2 - 1) == rootInfo.nodes
+}
+
+// IsCBT 判断一个二叉树是不是一个完全二叉树
+// 满二叉树：              完全二叉树：
+//
+//	    1                     1
+//	2       3            2        3
+//
+// 4    5  6     7      4     5  6
+func (t *Tree[T]) IsCBT() bool {
+	if t.Root == nil {
+		return true
+	}
+	head := t.Root
+
+	type info struct {
+		isFull bool
+		isCBT  bool
+		height int
+	}
+
+	var f func(node *Node[T]) *info
+
+	f = func(node *Node[T]) *info {
+		// 如果是空树，我们封装Info而不是返回为空
+		// 好处是下文不需要额外增加判空处理
+		if node == nil {
+			return &info{
+				isFull: true,
+				isCBT:  true,
+				height: 0,
+			}
+		}
+
+		leftInfo := f(node.Left)
+		rightInfo := f(node.Right)
+
+		// 整合当前节点的info
+		// 高度信息=左右树最大高度值+1
+		currentHeight := int(math.Max(float64(leftInfo.height), float64(rightInfo.height))) + 1
+		// node是否是满二叉树信息 = 左右都是满且左右高度一样
+		currentIsFull := leftInfo.isFull && rightInfo.isFull && leftInfo.height == rightInfo.height
+		currentIsBST := false
+		if currentIsFull { // 满二叉树一定是完全二叉树
+			currentIsBST = true
+		} else { // 以node为头整棵树，不是满二叉树，再检查是不是完全二叉树
+			// 左右都是完全二叉树才有讨论的必要
+			if leftInfo.isCBT && rightInfo.isCBT {
+				// 第二种情况。左树是完全二叉树，右树是满二叉树，左树高度比右树高度大1
+				//        1
+				//    2       3
+				// 4
+				if leftInfo.isCBT && rightInfo.isFull && leftInfo.height == (rightInfo.height+1) {
+					currentIsBST = true
+				}
+				// 第三种情况。左树满，右树满，且左树高度比右树高度大1
+				//        1
+				//    2       3
+				// 4    5
+				if leftInfo.isFull && rightInfo.isFull && leftInfo.height == (rightInfo.height+1) {
+					currentIsBST = true
+				}
+				// 第四种情况。左树满，右树是完全二叉树，且左右树高度相同
+				//        1
+				//    2       3
+				// 4    5  6
+				if leftInfo.isFull && rightInfo.isCBT && leftInfo.height == rightInfo.height {
+					currentIsBST = true
+				}
+			}
+		}
+		return &info{
+			isFull: currentIsFull,
+			isCBT:  currentIsBST,
+			height: currentHeight,
+		}
+	}
+
+	return f(head).isCBT
+}
+
+// LowestCommonAncestor 求二叉树中两个节点的最近公共祖先
+func (t *Tree[T]) LowestCommonAncestor(p *Node[T], q *Node[T]) *Node[T] {
+	if t.Root == nil {
+		return t.Root
+	}
+
+	var f func(node *Node[T], p *Node[T], q *Node[T]) *Node[T]
+
+	f = func(node *Node[T], p *Node[T], q *Node[T]) *Node[T] {
+		// 如果当前树根为空，或者p和q中有等于 node的，那么它们的最近公共祖先即为node（一个节点也可以是它自己的祖先）
+		if node == nil || p == node || q == node {
+			return node
+		}
+		// 递归遍历左子树，只要在左子树中找到了p或q，则先找到谁就返回谁
+		left := f(node.Left, p, q)
+		// 递归遍历右子树，只要在右子树中找到了p或q，则先找到谁就返回谁
+		right := f(node.Right, p, q)
+
+		// left和 right均不为空时，说明 p、q节点分别在 node异侧, 最近公共祖先即为 node;
+		// 如果 p 和 q 分别在左右子树中，或者根节点本身就是 p 或 q，则返回根节点
+		if left != nil && right != nil {
+			return node
+		}
+
+		// 如果 p 和 q 都在左子树中，则返回左子树的结果
+		if left != nil {
+			return left
+		}
+
+		// 如果 p 和 q 都在右子树中，则返回右子树的结果
+		if right != nil {
+			return right
+		}
+
+		// 这里表示，p和q不在已node为头节点的树中
+		return nil
+	}
+
+	return f(t.Root, p, q)
+}
+
+// IsSymmetric 判断一个二叉树是不是镜面对称的
+func (t *Tree[T]) IsSymmetric(comparator pkg.Comparator[T]) bool {
+	if t.Root == nil {
+		return true
+	}
+
+	// 原始树 node1
+	// 镜面树 node2
+	var f func(node1 *Node[T], node2 *Node[T]) bool
+
+	f = func(node1 *Node[T], node2 *Node[T]) bool {
+		// 当前镜像的节点都为空，也算合法的镜像
+		if node1 == nil && node2 == nil {
+			return true
+		}
+
+		// 互为镜像的两个点不为空
+		if node1 != nil && node2 != nil {
+			// 当前两个镜像点要是相等的，
+			// A树的左树和B树的右树互为镜像且满足，且A树的右树和B树的左树互为镜像，且满足。
+			// 那么当前的镜像点下面的都是满足的
+			return comparator(node1.Value, node2.Value) == 0 &&
+				f(node1.Left, node2.Right) && f(node1.Right, node2.Left)
+		}
+		// 一个为空，一个不为空 肯定不构成镜像  false
+		return false
+	}
+
+	return f(t.Root, t.Root)
 }
