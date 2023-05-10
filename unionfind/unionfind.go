@@ -3,7 +3,7 @@ package unionfind
 import "github.com/dairongpeng/ds/stack/arraystack"
 
 // UnionFind 并查集结构
-type UnionFind[T int | int32 | int64 | float32 | float64 | string | *interface{}] struct {
+type UnionFind[T int | int64 | float64 | string | *interface{}] struct {
 	// 并查集中的点和该点的代表节点的映射
 	flag map[T]T
 	// 当前点，是代表点，会在sizeMap中记录该代表点的连通个数
@@ -11,7 +11,7 @@ type UnionFind[T int | int32 | int64 | float32 | float64 | string | *interface{}
 }
 
 // NewUnionFind 构建一个并查集结构
-func NewUnionFind[T int | int32 | int64 | float32 | float64 | string | *interface{}](values []T) *UnionFind[T] {
+func NewUnionFind[T int | int64 | float64 | string | *interface{}](values []T) *UnionFind[T] {
 	f := make(map[T]T, 0)
 	s := make(map[T]int, 0)
 
